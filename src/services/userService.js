@@ -3,7 +3,7 @@ import { getHeaders, handleApiResponse } from "../utils/apiUtils";
 const BASE_URL = "/api/v1/users";
 
 export async function getAllUsers() {
-  const response = await fetch(`${BASE_URL}/admin/users`, {
+  const response = await fetch(`${BASE_URL}`, {
     method: "GET",
     headers: getHeaders(),
     credentials: "include"
@@ -13,8 +13,8 @@ export async function getAllUsers() {
   return data.data || data;
 }
 
-export async function searchUsers(email) {
-  const response = await fetch(`${BASE_URL}/search?email=${encodeURIComponent(email)}`, {
+export async function searchUsers(query) {
+  const response = await fetch(`${BASE_URL}/search?query=${encodeURIComponent(query)}`, {
     method: "GET",
     headers: getHeaders(),
     credentials: "include"
@@ -25,7 +25,7 @@ export async function searchUsers(email) {
 }
 
 export async function updateUserRole(userId, role) {
-  const response = await fetch(`${BASE_URL}/admin/${userId}/role`, {
+  const response = await fetch(`${BASE_URL}/${userId}/role`, {
     method: "PATCH",
     headers: getHeaders(),
     credentials: "include",
@@ -37,7 +37,7 @@ export async function updateUserRole(userId, role) {
 }
 
 export async function deleteUser(userId) {
-  const response = await fetch(`${BASE_URL}/admin/${userId}`, {
+  const response = await fetch(`${BASE_URL}/${userId}`, {
     method: "DELETE",
     headers: getHeaders(),
     credentials: "include"

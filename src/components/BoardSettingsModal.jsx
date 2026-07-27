@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateBoard, deleteBoard, addBoardMember, removeBoardMember } from "../services/boardService";
 import { searchUsers } from "../services/userService";
 import { useAuth } from "../context/AuthContext";
@@ -14,10 +14,9 @@ export default function BoardSettingsModal({ board, onClose }) {
   const [name, setName] = useState(board.name);
   const [description, setDescription] = useState(board.description || "");
   
-  const [searchEmail, setSearchEmail] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState("");
 
   const [formError, setFormError] = useState("");
 
@@ -49,9 +48,6 @@ export default function BoardSettingsModal({ board, onClose }) {
     mutationFn: (userId) => addBoardMember({ boardId: board._id, userId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["board", board._id] });
-      setSelectedUserId("");
-      setSearchEmail("");
-      setSearchResults([]);
       setFormError("");
     },
     onError: (err) => setFormError(err.message),
@@ -71,31 +67,39 @@ export default function BoardSettingsModal({ board, onClose }) {
     updateMutation.mutate();
   };
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!searchEmail.trim()) return;
-    setIsSearching(true);
-    setFormError("");
-    try {
-      const results = await searchUsers(searchEmail.trim());
-      setSearchResults(results);
-      setSelectedUserId("");
-    } catch (err) {
-      setFormError(err.message);
-    } finally {
+  // Debounced search on typing
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
       setIsSearching(false);
+      return;
     }
-  };
 
-  const handleAddMember = () => {
-    if (!selectedUserId) return;
-    addMemberMutation.mutate(selectedUserId);
-  };
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      setFormError("");
+      try {
+        const results = await searchUsers(searchQuery.trim());
+        setSearchResults(results || []);
+      } catch (err) {
+        setFormError(err.message || "Failed to search users");
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handleDelete = () => {
     if (window.confirm("Are you absolutely sure you want to delete this board and all its columns and tasks? This cannot be undone.")) {
       deleteMutation.mutate();
     }
+  };
+
+  const isAlreadyMember = (userId) => {
+    if (board.owner === userId || board.owner?._id === userId) return true;
+    return board.members?.some(m => (m._id || m) === userId);
   };
 
   if (!canManage) {
@@ -112,19 +116,19 @@ export default function BoardSettingsModal({ board, onClose }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "500px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
-            <h2 style={{ margin: 0 }}>Board Settings</h2>
-            <button className="btn-secondary" style={{ padding: "4px 10px", fontSize: "0.85rem", cursor: "pointer" }} onClick={onClose}>Close</button>
+      <div className="modal-content settings-modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>Board Settings</h2>
+          <button className="modal-close-btn" onClick={onClose}>&times;</button>
         </div>
         
-        <div style={{ display: "flex", gap: "10px", marginBottom: "20px", borderBottom: "1px solid #ddd", paddingBottom: "10px" }}>
-          <button className={activeTab === "edit" ? "btn-primary" : "btn-secondary"} onClick={() => setActiveTab("edit")}>Board Details</button>
-          <button className={activeTab === "members" ? "btn-primary" : "btn-secondary"} onClick={() => setActiveTab("members")}>Manage Members</button>
-          <button className={activeTab === "danger" ? "btn-primary" : "btn-secondary"} onClick={() => setActiveTab("danger")}>Danger Zone</button>
+        <div className="modal-tabs">
+          <button className={activeTab === "edit" ? "tab-btn active" : "tab-btn"} onClick={() => setActiveTab("edit")}>Board Details</button>
+          <button className={activeTab === "members" ? "tab-btn active" : "tab-btn"} onClick={() => setActiveTab("members")}>Manage Members</button>
+          <button className={activeTab === "danger" ? "tab-btn active danger" : "tab-btn danger"} onClick={() => setActiveTab("danger")}>Danger Zone</button>
         </div>
 
-        {formError && <div className="form-error" style={{ marginBottom: "15px" }}>{formError}</div>}
+        {formError && <div className="form-error">{formError}</div>}
 
         {activeTab === "edit" && (
           <form onSubmit={handleUpdate}>
@@ -134,7 +138,7 @@ export default function BoardSettingsModal({ board, onClose }) {
             </div>
             <div className="form-group">
               <label>Description</label>
-              <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} />
+              <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
             </div>
             <div className="modal-actions">
               <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
@@ -146,122 +150,110 @@ export default function BoardSettingsModal({ board, onClose }) {
         )}
 
         {activeTab === "members" && (
-          <div>
-            <div style={{ marginBottom: "15px" }}>
-              <label style={{ fontSize: "0.85rem", fontWeight: "bold", display: "block", marginBottom: "6px" }}>Option 1: Search User by Email</label>
-              <form onSubmit={handleSearch} style={{ display: "flex", gap: "10px" }}>
+          <div className="members-tab-container">
+            <div className="member-search-box">
+              <label className="search-label">Find People to Add</label>
+              <div className="search-input-wrapper">
                 <input 
                   type="text" 
-                  placeholder="e.g. user@example.com" 
-                  value={searchEmail} 
-                  onChange={(e) => setSearchEmail(e.target.value)} 
-                  style={{ flex: 1 }}
+                  placeholder="Search by name or email address..." 
+                  value={searchQuery} 
+                  onChange={(e) => setSearchQuery(e.target.value)} 
+                  className="search-input"
                 />
-                <button type="submit" className="btn-secondary" disabled={isSearching || !searchEmail}>
-                  {isSearching ? "Searching..." : "Search"}
-                </button>
-              </form>
+                {isSearching && <span className="search-spinner">Searching...</span>}
+              </div>
             </div>
 
+            {/* Live Search User Card List - NO Dropdowns or DB ID search */}
             {searchResults.length > 0 && (
-              <div style={{ marginBottom: "20px", padding: "10px", background: "#f9fafb", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
-                <p style={{ fontSize: "0.88rem", color: "#374151", marginBottom: "8px", fontWeight: "bold" }}>Select user to add:</p>
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <select 
-                    value={selectedUserId} 
-                    onChange={(e) => setSelectedUserId(e.target.value)} 
-                    style={{ flex: 1, padding: "8px", borderRadius: "4px", border: "1px solid #ccc", background: "white", color: "black" }}
-                  >
-                    <option value="">-- Choose a user --</option>
-                    {searchResults.map(u => (
-                      <option key={u._id} value={u._id}>{u.fullName} ({u.email})</option>
-                    ))}
-                  </select>
-                  <button 
-                    type="button" 
-                    className="btn-primary" 
-                    onClick={handleAddMember}
-                    disabled={addMemberMutation.isPending || !selectedUserId}
-                  >
-                    Add
-                  </button>
-                </div>
+              <div className="search-results-list">
+                <span className="results-heading">Matching Users</span>
+                {searchResults.map((u) => {
+                  const added = isAlreadyMember(u._id);
+                  return (
+                    <div key={u._id} className="user-search-card">
+                      <div className="user-info-group">
+                        {u.profilePicTag ? (
+                          <img src={u.profilePicTag} alt="" className="avatar-img" />
+                        ) : (
+                          <div className="avatar-placeholder">{u.fullName?.[0]?.toUpperCase() || "U"}</div>
+                        )}
+                        <div>
+                          <div className="user-name">{u.fullName}</div>
+                          <div className="user-email">{u.email}</div>
+                        </div>
+                      </div>
+                      {added ? (
+                        <span className="badge-member">Member</span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn-add-member"
+                          onClick={() => addMemberMutation.mutate(u._id)}
+                          disabled={addMemberMutation.isPending}
+                        >
+                          Add Member
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 
-            {searchResults.length === 0 && searchEmail && !isSearching && (
-              <p style={{ fontSize: "0.85rem", color: "#6b7280", marginBottom: "15px" }}>No users found matching this email.</p>
+            {searchQuery && searchResults.length === 0 && !isSearching && (
+              <p className="no-results-msg">No users matching &quot;{searchQuery}&quot;</p>
             )}
 
-            <div style={{ margin: "15px 0", borderTop: "1px solid #eee", paddingTop: "15px" }}>
-              <label style={{ fontSize: "0.85rem", fontWeight: "bold", display: "block", marginBottom: "6px" }}>Option 2: Add by Exact User ID</label>
-              <div style={{ display: "flex", gap: "10px" }}>
-                <input 
-                  type="text" 
-                  placeholder="Paste MongoDB User ID (e.g. 64b...)" 
-                  value={selectedUserId} 
-                  onChange={(e) => setSelectedUserId(e.target.value)} 
-                  style={{ flex: 1 }}
-                />
-                <button 
-                  type="button" 
-                  className="btn-primary" 
-                  onClick={handleAddMember}
-                  disabled={addMemberMutation.isPending || !selectedUserId}
-                >
-                  {addMemberMutation.isPending ? "Adding..." : "Add ID"}
-                </button>
+            <div className="members-section">
+              <h4>Current Members ({board.members?.length || 0})</h4>
+              {(!board.members || board.members.length === 0) && (
+                <p className="empty-members-msg">No members added yet.</p>
+              )}
+              <div className="members-list">
+                {board.members?.map((member) => {
+                  const isObject = typeof member === "object" && member !== null;
+                  const mId = isObject ? member._id : member;
+                  const mName = isObject ? (member.fullName || member.email || mId) : mId;
+                  const mEmail = isObject ? member.email : "";
+                  const mPic = isObject ? member.profilePicTag : null;
+                  
+                  return (
+                    <div key={mId} className="member-card">
+                      <div className="user-info-group">
+                        {mPic ? (
+                          <img src={mPic} alt="" className="avatar-img" />
+                        ) : (
+                          <div className="avatar-placeholder">{mName[0]?.toUpperCase() || "U"}</div>
+                        )}
+                        <div>
+                          <div className="user-name">{mName}</div>
+                          {mEmail && <div className="user-email">{mEmail}</div>}
+                        </div>
+                      </div>
+                      <button 
+                        type="button"
+                        className="btn-remove-member"
+                        onClick={() => removeMemberMutation.mutate(mId)}
+                        disabled={removeMemberMutation.isPending}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-
-            <h4 style={{ margin: "15px 0 10px 0" }}>Current Members</h4>
-            {(!board.members || board.members.length === 0) && (
-              <p style={{ color: "#94a3b8", fontSize: "0.9rem" }}>No members added yet.</p>
-            )}
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, maxHeight: "200px", overflowY: "auto" }}>
-              {board.members?.map((member) => {
-                const isObject = typeof member === "object" && member !== null;
-                const mId = isObject ? member._id : member;
-                const mName = isObject ? (member.fullName || member.email || mId) : mId;
-                const mEmail = isObject ? member.email : "";
-                const mPic = isObject ? member.profilePicTag : null;
-                
-                return (
-                  <li key={mId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid #eee" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      {mPic ? (
-                        <img src={mPic} alt="" style={{ width: "32px", height: "32px", borderRadius: "50%", objectFit: "cover" }} />
-                      ) : (
-                        <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#0284c7", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", fontSize: "0.85rem" }}>
-                          {mName[0]?.toUpperCase() || "U"}
-                        </div>
-                      )}
-                      <div>
-                        <div style={{ fontWeight: "600", fontSize: "0.9rem" }}>{mName}</div>
-                        {mEmail && <div style={{ fontSize: "0.78rem", color: "#64748b" }}>{mEmail}</div>}
-                      </div>
-                    </div>
-                    <button 
-                      className="btn-secondary" 
-                      style={{ padding: "4px 10px", fontSize: "0.8rem", background: "#fee2e2", color: "#dc2626", borderColor: "#fca5a5", borderRadius: "6px", cursor: "pointer" }}
-                      onClick={() => removeMemberMutation.mutate(mId)}
-                      disabled={removeMemberMutation.isPending}
-                    >
-                      Remove
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
           </div>
         )}
 
         {activeTab === "danger" && (
-          <div>
-            <p style={{ color: "#ef4444", marginBottom: "15px" }}>
-              Deleting a board will permanently remove all its columns and tasks. This action cannot be undone.
+          <div className="danger-zone-container">
+            <p className="danger-warning">
+              Deleting this board will permanently purge all columns and tasks associated with it. This action cannot be undone.
             </p>
-            <button className="btn-primary" style={{ background: "#dc2626", borderColor: "#dc2626", width: "100%" }} onClick={handleDelete} disabled={deleteMutation.isPending}>
+            <button className="btn-danger-large" onClick={handleDelete} disabled={deleteMutation.isPending}>
               {deleteMutation.isPending ? "Deleting..." : "Delete Board Permanently"}
             </button>
           </div>

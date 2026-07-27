@@ -9,7 +9,15 @@ import {
   createDefaultColumns,
   deleteColumn,
 } from "../services/columnService";
+import {
+  getTasksByBoard,
+  createTask,
+  updateTask,
+  deleteTask,
+} from "../services/taskService";
 import BoardSettingsModal from "../components/BoardSettingsModal";
+import TaskCard from "../components/TaskCard";
+import TaskModal from "../components/TaskModal";
 
 function BoardDetails() {
   const { boardId } = useParams();
@@ -22,6 +30,18 @@ function BoardDetails() {
   const [newColumnTitle, setNewColumnTitle] = useState("");
   const [formError, setFormError] = useState("");
 
+  // Task Modal state
+  const [taskModalState, setTaskModalState] = useState({
+    isOpen: false,
+    columnId: null,
+    task: null, // null for create, task object for edit
+  });
+
+  // Drag and Drop state
+  const [draggedTaskId, setDraggedTaskId] = useState(null);
+  const [dragOverColumnId, setDragOverColumnId] = useState(null);
+
+  // Queries
   const {
     data: boardResponse,
     isLoading: boardLoading,
@@ -43,6 +63,19 @@ function BoardDetails() {
     queryFn: () => getColumnsByBoard(boardId),
     enabled: !!user && !!boardId,
   });
+
+  const {
+    data: tasksResponse,
+    isLoading: tasksLoading,
+    isError: tasksIsError,
+    error: tasksError,
+  } = useQuery({
+    queryKey: ["tasks", boardId],
+    queryFn: () => getTasksByBoard(boardId),
+    enabled: !!user && !!boardId,
+  });
+
+  // Column Mutations
   const createColMutation = useMutation({
     mutationFn: (title) => createColumn({ title, boardId }),
     onSuccess: () => {
@@ -51,9 +84,7 @@ function BoardDetails() {
       setFormError("");
       setShowAddColumnModal(false);
     },
-    onError: (err) => {
-      setFormError(err.message || "Failed to create column");
-    },
+    onError: (err) => setFormError(err.message || "Failed to create column"),
   });
 
   const defaultColsMutation = useMutation({
@@ -61,22 +92,46 @@ function BoardDetails() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["columns", boardId] });
     },
-    onError: (err) => {
-      alert(err.message || "Failed to initialize default columns");
-    },
+    onError: (err) => alert(err.message || "Failed to initialize default columns"),
   });
 
-  // Mutation: Delete column
   const deleteColMutation = useMutation({
     mutationFn: (colId) => deleteColumn(colId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["columns", boardId] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", boardId] });
     },
-    onError: (err) => {
-      alert(err.message || "Failed to delete column");
-    },
+    onError: (err) => alert(err.message || "Failed to delete column"),
   });
 
+  // Task Mutations
+  const createTaskMutation = useMutation({
+    mutationFn: (taskData) => createTask(taskData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", boardId] });
+      setTaskModalState({ isOpen: false, columnId: null, task: null });
+    },
+    onError: (err) => alert(err.message || "Failed to create task"),
+  });
+
+  const updateTaskMutation = useMutation({
+    mutationFn: ({ taskId, updates }) => updateTask(taskId, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", boardId] });
+      setTaskModalState({ isOpen: false, columnId: null, task: null });
+    },
+    onError: (err) => alert(err.message || "Failed to update task"),
+  });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: (taskId) => deleteTask(taskId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", boardId] });
+    },
+    onError: (err) => alert(err.message || "Failed to delete task"),
+  });
+
+  // Column Handlers
   const handleAddColumnSubmit = (e) => {
     e.preventDefault();
     if (!newColumnTitle.trim()) {
@@ -87,12 +142,85 @@ function BoardDetails() {
   };
 
   const handleDeleteColumn = (colId, colTitle) => {
-    if (window.confirm(`Are you sure you want to delete the column "${colTitle}"?`)) {
+    if (window.confirm(`Are you sure you want to delete column "${colTitle}" and all its tasks?`)) {
       deleteColMutation.mutate(colId);
     }
   };
 
-  if (authLoading || (user && (boardLoading || columnsLoading))) {
+  // Task Handlers
+  const handleOpenCreateTask = (columnId) => {
+    setTaskModalState({ isOpen: true, columnId, task: null });
+  };
+
+  const handleOpenEditTask = (task) => {
+    setTaskModalState({ isOpen: true, columnId: task.column, task });
+  };
+
+  const handleDeleteTask = (taskId) => {
+    if (window.confirm("Are you sure you want to delete this task?")) {
+      deleteTaskMutation.mutate(taskId);
+    }
+  };
+
+  const handleTaskSubmit = (payload) => {
+    if (taskModalState.task) {
+      updateTaskMutation.mutate({ taskId: taskModalState.task._id, updates: payload });
+    } else {
+      createTaskMutation.mutate(payload);
+    }
+  };
+
+  // Drag and Drop Handlers
+  const handleDragStart = (e, task) => {
+    e.dataTransfer.setData("text/plain", task._id);
+    e.dataTransfer.effectAllowed = "move";
+    setDraggedTaskId(task._id);
+  };
+
+  const handleDragOver = (e, columnId) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverColumnId !== columnId) {
+      setDragOverColumnId(columnId);
+    }
+  };
+
+  const handleDragLeave = (e, columnId) => {
+    e.preventDefault();
+    if (dragOverColumnId === columnId) {
+      setDragOverColumnId(null);
+    }
+  };
+
+  const handleDrop = (e, targetColumnId) => {
+    e.preventDefault();
+    setDragOverColumnId(null);
+    const taskId = e.dataTransfer.getData("text/plain") || draggedTaskId;
+    setDraggedTaskId(null);
+
+    if (!taskId) return;
+
+    const allTasks = Array.isArray(tasksResponse?.data) ? tasksResponse.data : [];
+    const taskObj = allTasks.find((t) => t._id === taskId);
+    if (!taskObj) return;
+
+    const isAssignee = taskObj.assignedTo && (taskObj.assignedTo._id === user?._id || taskObj.assignedTo === user?._id);
+    const canMoveTask = isOwner || isAssignee;
+
+    if (!canMoveTask) {
+      alert("Permission denied: You can only move tasks assigned to you.");
+      return;
+    }
+
+    if ((taskObj.column?._id || taskObj.column) !== targetColumnId) {
+      updateTaskMutation.mutate({
+        taskId,
+        updates: { column: targetColumnId },
+      });
+    }
+  };
+
+  if (authLoading || (user && (boardLoading || columnsLoading || tasksLoading))) {
     return (
       <main className="board-details-page">
         <div className="board-details-container">
@@ -122,7 +250,6 @@ function BoardDetails() {
     );
   }
 
-  // Board Fetch Error
   if (boardIsError) {
     return (
       <main className="board-details-page">
@@ -141,6 +268,13 @@ function BoardDetails() {
 
   const board = boardResponse?.data || {};
   const columns = Array.isArray(columnsResponse?.data) ? columnsResponse.data : [];
+  const tasks = Array.isArray(tasksResponse?.data) ? tasksResponse.data : [];
+
+  const isOwner = user?.role === "admin" || board.owner === user?._id || board.owner?._id === user?._id;
+  const boardMembers = [
+    ...(board.owner ? [board.owner] : []),
+    ...(Array.isArray(board.members) ? board.members : []),
+  ];
 
   return (
     <main className="board-details-page">
@@ -148,6 +282,10 @@ function BoardDetails() {
         
         <div className="board-nav">
           <Link to={user?.role === "admin" ? "/admin" : "/boards"} className="back-link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: "4px" }}>
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
             Back to Boards
           </Link>
         </div>
@@ -159,23 +297,29 @@ function BoardDetails() {
           </div>
 
           <div className="board-actions">
-            {(user?.role === "admin" || board.owner === user?._id || board.owner?._id === user?._id) && (
-              <button
-                className="btn-secondary"
-                onClick={() => setShowSettingsModal(true)}
-                style={{ marginRight: "10px" }}
-              >
-                Board Settings
-              </button>
+            {isOwner && (
+              <>
+                <button
+                  className="btn-secondary"
+                  onClick={() => setShowSettingsModal(true)}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                  </svg>
+                  Board Settings
+                </button>
+                <button
+                  className="btn-primary"
+                  onClick={() => setShowAddColumnModal(true)}
+                >
+                  + Add Column
+                </button>
+              </>
             )}
-            <button
-              className="btn-primary"
-              onClick={() => setShowAddColumnModal(true)}
-            >
-              Add Column
-            </button>
 
-            {columns.length === 0 && (
+            {isOwner && columns.length === 0 && (
               <button
                 className="btn-secondary"
                 onClick={() => defaultColsMutation.mutate()}
@@ -187,9 +331,9 @@ function BoardDetails() {
           </div>
         </header>
 
-        {columnsIsError && (
+        {(columnsIsError || tasksIsError) && (
           <div className="form-error" style={{ marginBottom: "20px" }}>
-            {columnsError?.message || "Failed to load columns for this board."}
+            {columnsError?.message || tasksError?.message || "Failed to load board resources."}
           </div>
         )}
 
@@ -203,60 +347,101 @@ function BoardDetails() {
                 className="btn-primary"
                 onClick={() => setShowAddColumnModal(true)}
               >
-                Add Column
+                + Add Column
               </button>
               <button
                 className="btn-secondary"
                 onClick={() => defaultColsMutation.mutate()}
                 disabled={defaultColsMutation.isPending}
               >
-                {defaultColsMutation.isPending ? "Generating..." : "Generate Default Workflow (To Do, In Progress, Done)"}
+                {defaultColsMutation.isPending ? "Generating..." : "Generate Default Workflow"}
               </button>
             </div>
           </section>
         ) : (
           <section className="kanban-board-grid">
-            {columns.map((col) => (
-              <div key={col._id} className="kanban-column">
-                
-                <div className="column-header">
-                  <div className="column-title-group">
-                    <h3>{col.title}</h3>
+            {columns.map((col) => {
+              const colTasks = tasks.filter((t) => {
+                const cId = t.column?._id || t.column;
+                return cId === col._id;
+              });
+
+              const isDragOver = dragOverColumnId === col._id;
+
+              return (
+                <div
+                  key={col._id}
+                  className={`kanban-column ${isDragOver ? "drag-over" : ""}`}
+                  onDragOver={(e) => handleDragOver(e, col._id)}
+                  onDragLeave={(e) => handleDragLeave(e, col._id)}
+                  onDrop={(e) => handleDrop(e, col._id)}
+                >
+                  <div className="column-header">
+                    <div className="column-title-group">
+                      <h3>{col.title}</h3>
+                      <span className="task-count-badge">{colTasks.length}</span>
+                    </div>
+                    {isOwner && (
+                      <button
+                        className="col-delete-btn"
+                        title="Delete Column"
+                        onClick={() => handleDeleteColumn(col._id, col.title)}
+                        disabled={deleteColMutation.isPending}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                      </button>
+                    )}
                   </div>
-                  <button
-                    className="col-delete-btn"
-                    title="Delete Column"
-                    onClick={() => handleDeleteColumn(col._id, col.title)}
-                    disabled={deleteColMutation.isPending}
-                  >
-                    Delete
-                  </button>
-                </div>
 
-                <div className="column-body">
-                  <div className="task-empty-placeholder">
-                    <span>No tasks</span>
+                  <div className="column-body">
+                    {colTasks.length === 0 ? (
+                      <div className="task-empty-placeholder">
+                        <span>Drop tasks here</span>
+                      </div>
+                    ) : (
+                      colTasks.map((t) => (
+                        <TaskCard
+                          key={t._id}
+                          task={t}
+                          currentUser={user}
+                          isBoardOwner={isOwner}
+                          onEditTask={handleOpenEditTask}
+                          onDeleteTask={handleDeleteTask}
+                          onDragStart={handleDragStart}
+                        />
+                      ))
+                    )}
                   </div>
+
+                  {isOwner && (
+                    <div className="column-footer">
+                      <button
+                        type="button"
+                        className="add-task-btn"
+                        onClick={() => handleOpenCreateTask(col._id)}
+                      >
+                        + Add Task
+                      </button>
+                    </div>
+                  )}
                 </div>
+              );
+            })}
 
-                <div className="column-footer">
-                  <button className="add-task-btn" disabled>
-                    Add Task
-                  </button>
+            {isOwner && (
+              <div className="add-column-card" onClick={() => setShowAddColumnModal(true)}>
+                <div className="add-column-card-content">
+                  <span>+ Add Column</span>
                 </div>
-
               </div>
-            ))}
-
-            <div className="add-column-card" onClick={() => setShowAddColumnModal(true)}>
-              <div className="add-column-card-content">
-                <span>+ Add Column</span>
-              </div>
-            </div>
-
+            )}
           </section>
         )}
 
+        {/* Add Column Modal */}
         {showAddColumnModal && (
           <div className="modal-overlay" onClick={() => setShowAddColumnModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -300,11 +485,23 @@ function BoardDetails() {
                   </button>
                 </div>
               </form>
-
             </div>
           </div>
         )}
 
+        {/* Task Create/Edit Modal */}
+        {taskModalState.isOpen && (
+          <TaskModal
+            task={taskModalState.task}
+            columnId={taskModalState.columnId}
+            boardMembers={boardMembers}
+            onClose={() => setTaskModalState({ isOpen: false, columnId: null, task: null })}
+            onSubmit={handleTaskSubmit}
+            isPending={createTaskMutation.isPending || updateTaskMutation.isPending}
+          />
+        )}
+
+        {/* Board Settings Modal */}
         {showSettingsModal && (
           <BoardSettingsModal board={board} onClose={() => setShowSettingsModal(false)} />
         )}
