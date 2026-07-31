@@ -1,32 +1,19 @@
 function Footer() {
   return (
     <footer className="footer">
-      <div>
-        <h3>Kboard</h3>
-        <p>Building modern web applications with React and Node.js.</p>
+      <img src="/logo.svg" alt="Kboard" className="footer-logo-img" />
+
+      <div className="footer-links">
+        <span>About This Project: My first MERN Stack project, designed and developed by Ahsan Naveed. </span>
+        <span>Developer Contact: [ahsan.naveed1001@gmail.com](mailto:ahsan.naveed1001@gmail.com)</span>
+        <span>Built for learning and exploring full-stack web development with MongoDB, Express.js, React,
+       and Node.js.</span> 
+       <span>Thank you for checking out my first MERN Stack application!</span>
       </div>
 
-      <div>
-        <h4>Quick Links</h4>
-
-        <ul>
-          <li>Home</li>
-          <li>Products</li>
-          <li>About</li>
-          <li>Contact</li>
-        </ul>
-      </div>
-
-      <div>
-        <h4>Contact</h4>
-
-        <p>Email: </p>
-        <p>Phone: </p>
-      </div>
-
-      <hr />
-
-      <p>© 2026 Kboard. All Rights Reserved.</p>
+      <span className="footer-copy">
+        © 2026 Kboard Inc. All rights reserved.
+      </span>
     </footer>
   );
 }

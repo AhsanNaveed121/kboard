@@ -1,99 +1,125 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 function Navbar() {
   const { user, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const isActive = (path) => location.pathname === path;
 
   return (
     <nav className="navbar">
       <div className="logo">
-        <Link to="/">Kboard</Link>
+        <Link to="/">
+          <img src="/logo.svg" alt="Kboard" className="navbar-logo-img" />
+        </Link>
       </div>
 
+      {/* Nav Links */}
       <ul className="nav-links">
-        <li><Link to="/">Home</Link></li>
+        <li>
+          <Link
+            to="/"
+            className={isActive("/") ? "active" : ""}
+          >
+            Dashboard
+          </Link>
+        </li>
         {user?.role === "admin" ? (
-          <li><Link to="/admin" style={{ color: "#38bdf8", fontWeight: "bold" }}>Admin Dashboard</Link></li>
+          <li>
+            <Link
+              to="/admin"
+              className={isActive("/admin") ? "active" : ""}
+              style={{ color: "var(--cyan)" }}
+            >
+              Admin
+            </Link>
+          </li>
         ) : (
-          <li><Link to="/boards">Boards</Link></li>
+          <li>
+            <Link
+              to="/boards"
+              className={isActive("/boards") ? "active" : ""}
+            >
+              Boards
+            </Link>
+          </li>
         )}
-        {user && <li><Link to="/profile">Profile</Link></li>}
-        <li><Link to="/settings">Settings</Link></li>
-      </ul>
-
-      <div className="auth-links">
-        {user ? (
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        {user && (
+          <li>
             <Link
               to="/profile"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                textDecoration: "none",
-                color: "white",
-              }}
+              className={isActive("/profile") ? "active" : ""}
             >
+              Profile
+            </Link>
+          </li>
+        )}
+      </ul>
+
+      {/* Right-side auth area */}
+      <div className="auth-links">
+        {user ? (
+          <>
+            {/* Notification icon */}
+            <button className="nav-icon-btn" title="Notifications" aria-label="Notifications">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+            </button>
+
+            {/* Settings icon → navigates to /settings */}
+            <button
+              className={`nav-icon-btn${isActive("/settings") ? " active" : ""}`}
+              title="Settings"
+              aria-label="Settings"
+              onClick={() => navigate("/settings")}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
+
+            {/* Create Task CTA */}
+            <Link to="/boards">
+              <button className="navbar-create-btn">+ Create</button>
+            </Link>
+
+            {/* Avatar / Profile */}
+            <Link to="/profile" title={user.fullName}>
               {user.profilePicTag ? (
                 <img
                   src={user.profilePicTag}
                   alt="Profile"
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    border: user.role === "admin" ? "2px solid #38bdf8" : "1.5px solid #2563eb",
-                  }}
+                  className="nav-avatar"
                 />
               ) : (
-                <div
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    borderRadius: "50%",
-                    background: user.role === "admin" ? "#0284c7" : "#2563eb",
-                    color: "white",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "14px",
-                    fontWeight: "bold",
-                  }}
-                >
+                <div className="nav-avatar-placeholder">
                   {user.fullName ? user.fullName[0].toUpperCase() : "U"}
                 </div>
               )}
-              <span style={{ fontWeight: "600", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
-                {user.fullName}
-                {user.role === "admin" && (
-                  <span style={{ background: "#0284c7", color: "white", fontSize: "10px", padding: "2px 6px", borderRadius: "10px", fontWeight: "bold" }}>
-                    ADMIN
-                  </span>
-                )}
-              </span>
             </Link>
 
+            {/* Logout */}
             <button
               onClick={logout}
-              style={{
-                background: "transparent",
-                border: "1px solid #ef4444",
-                color: "#ef4444",
-                padding: "6px 14px",
-                borderRadius: "6px",
-                cursor: "pointer",
-                fontWeight: "bold",
-                fontSize: "13px",
-              }}
+              className="btn-secondary"
+              style={{ padding: "6px 14px", fontSize: "0.78rem" }}
             >
               Logout
             </button>
-          </div>
+          </>
         ) : (
           <>
-            <Link to="/login">Login</Link>
-            <Link to="/register">Register</Link>
+            <Link to="/login" className="btn-secondary" style={{ padding: "7px 16px", fontSize: "0.82rem" }}>
+              Login
+            </Link>
+            <Link to="/register">
+              <button className="navbar-create-btn">Register</button>
+            </Link>
           </>
         )}
       </div>
@@ -102,4 +128,3 @@ function Navbar() {
 }
 
 export default Navbar;
-

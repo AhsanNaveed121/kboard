@@ -282,7 +282,7 @@ function BoardDetails() {
         
         <div className="board-nav">
           <Link to={user?.role === "admin" ? "/admin" : "/boards"} className="back-link">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: "4px" }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="19" y1="12" x2="5" y2="12"></line>
               <polyline points="12 19 5 12 12 5"></polyline>
             </svg>
@@ -293,7 +293,9 @@ function BoardDetails() {
         <header className="board-header">
           <div>
             <h1>{board.name || "Kanban Board"}</h1>
-            {board.description && <p className="board-description">{board.description}</p>}
+            {board.description && (
+              <p className="board-description">{board.description}</p>
+            )}
           </div>
 
           <div className="board-actions">
@@ -302,11 +304,10 @@ function BoardDetails() {
                 <button
                   className="btn-secondary"
                   onClick={() => setShowSettingsModal(true)}
-                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                   </svg>
                   Board Settings
                 </button>
@@ -318,14 +319,13 @@ function BoardDetails() {
                 </button>
               </>
             )}
-
             {isOwner && columns.length === 0 && (
               <button
                 className="btn-secondary"
                 onClick={() => defaultColsMutation.mutate()}
                 disabled={defaultColsMutation.isPending}
               >
-                {defaultColsMutation.isPending ? "Generating..." : "Add Standard Columns"}
+                {defaultColsMutation.isPending ? "Generating…" : "Add Standard Columns"}
               </button>
             )}
           </div>
@@ -368,6 +368,11 @@ function BoardDetails() {
 
               const isDragOver = dragOverColumnId === col._id;
 
+              // Assign a color per column index for the dot indicator
+              const colColors = ["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ec4899", "#06b6d4"];
+              const colIdx = columns.findIndex((c) => c._id === col._id);
+              const dotColor = colColors[colIdx % colColors.length];
+
               return (
                 <div
                   key={col._id}
@@ -378,6 +383,7 @@ function BoardDetails() {
                 >
                   <div className="column-header">
                     <div className="column-title-group">
+                      <span className="column-color-dot" style={{ background: dotColor }} />
                       <h3>{col.title}</h3>
                       <span className="task-count-badge">{colTasks.length}</span>
                     </div>
@@ -388,7 +394,7 @@ function BoardDetails() {
                         onClick={() => handleDeleteColumn(col._id, col.title)}
                         disabled={deleteColMutation.isPending}
                       >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="3 6 5 6 21 6"></polyline>
                           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                         </svg>

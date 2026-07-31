@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Left vertical bar of K -->
+  <rect x="20" y="16" width="15" height="68" rx="7" fill="#6366f1"/>
+
+  <!-- Top diagonal arm of K -->
+  <polygon points="35,50 74,16 86,16 86,29 47,50" fill="#6366f1"/>
+
+  <!-- Bottom diagonal arm of K (violet accent) -->
+  <polygon points="35,50 74,84 86,84 86,71 47,50" fill="#7c3aed"/>
+</svg>

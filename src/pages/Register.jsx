@@ -52,7 +52,6 @@ function Register() {
       return;
     }
 
-
     setLoading(true);
     try {
       const response = await registerUser({ fullName, email, dob, password, profilePicFile });
@@ -60,15 +59,10 @@ function Register() {
       const token = payload.accessToken;
       const userData = payload.user || (payload.email ? payload : null);
 
-      if (token) {
-        localStorage.setItem("accessToken", token);
-      }
-      
-      if (userData) {
-        login(userData);
-      }
+      if (token) localStorage.setItem("accessToken", token);
+      if (userData) login(userData);
 
-      setSuccess("Account created successfully! Logging you in...");
+      setSuccess("Account created successfully! Logging you in…");
       setTimeout(() => navigate("/"), 1000);
     } catch (err) {
       setError(err.message);
@@ -80,16 +74,13 @@ function Register() {
   return (
     <main className="register-page">
       <section className="register-container">
-
         <h1>Create Account</h1>
         <p>Start managing your projects today.</p>
 
-        {/* Feedback banners */}
-        {error   && <p className="form-error">{error}</p>}
+        {error && <p className="form-error">{error}</p>}
         {success && <p className="form-success">{success}</p>}
 
         <form onSubmit={handleSubmit} noValidate>
-
           <div>
             <label htmlFor="fullName">Full Name</label>
             <input
@@ -108,7 +99,7 @@ function Register() {
               id="email"
               name="email"
               type="email"
-              placeholder="Enter your email"
+              placeholder="name@company.com"
               value={form.email}
               onChange={handleChange}
             />
@@ -157,18 +148,17 @@ function Register() {
               accept="image/*"
               onChange={handleFileChange}
             />
-            {/* Preview thumbnail */}
             {previewUrl && (
               <img
                 src={previewUrl}
                 alt="Profile preview"
                 style={{
-                  marginTop: "8px",
-                  width: "72px",
-                  height: "72px",
+                  marginTop: "10px",
+                  width: "68px",
+                  height: "68px",
                   borderRadius: "50%",
                   objectFit: "cover",
-                  border: "2px solid var(--clr-accent, #6366f1)",
+                  border: "2px solid var(--indigo)",
                 }}
               />
             )}
@@ -177,14 +167,12 @@ function Register() {
           <button type="submit" disabled={loading}>
             {loading ? "Registering…" : "Register"}
           </button>
-
         </form>
 
         <p>
           Already have an account?{" "}
           <Link to="/login">Login</Link>
         </p>
-
       </section>
     </main>
   );

@@ -13,23 +13,20 @@ function Boards() {
   const [newBoardDesc, setNewBoardDesc] = useState("");
   const [formError, setFormError] = useState("");
 
-  // TanStack Query to fetch user boards from API
   const {
     data: boardsResponse,
     isLoading: boardsLoading,
     isError,
-    error
+    error,
   } = useQuery({
     queryKey: ["boards"],
     queryFn: getBoards,
-    enabled: !!user // Execute only when authenticated
+    enabled: !!user,
   });
 
-  // Mutation to create a board
   const createBoardMutation = useMutation({
     mutationFn: createBoard,
     onSuccess: () => {
-      // Auto-refetch boards list
       queryClient.invalidateQueries({ queryKey: ["boards"] });
       setNewBoardName("");
       setNewBoardDesc("");
@@ -38,7 +35,7 @@ function Boards() {
     },
     onError: (err) => {
       setFormError(err.message || "Failed to create board");
-    }
+    },
   });
 
   const handleCreateBoard = (e) => {
@@ -47,27 +44,26 @@ function Boards() {
       setFormError("Board name is required");
       return;
     }
-
     createBoardMutation.mutate({
       name: newBoardName.trim(),
-      description: newBoardDesc.trim()
+      description: newBoardDesc.trim(),
     });
   };
 
-  // 1. Loading State
+  // Loading State
   if (authLoading || (user && boardsLoading)) {
     return (
       <div className="boards-page">
         <div className="boards-container">
           <div className="boards-loading">
-            <h2>Loading your boards...</h2>
+            <h2>Loading your boards…</h2>
           </div>
         </div>
       </div>
     );
   }
 
-  // 2. Authentication Error State (Not logged in)
+  // Not logged in
   if (!user) {
     return (
       <div className="boards-page">
@@ -89,53 +85,74 @@ function Boards() {
     );
   }
 
-  // Safely extract array from ApiResponse (backend returns data inside response payload)
-  const boards = Array.isArray(boardsResponse?.data) ? boardsResponse.data : (Array.isArray(boardsResponse) ? boardsResponse : []);
+  const boards = Array.isArray(boardsResponse?.data)
+    ? boardsResponse.data
+    : Array.isArray(boardsResponse)
+    ? boardsResponse
+    : [];
 
-  // 3. Logged-in Dashboard View
   return (
     <div className="boards-page">
       <div className="boards-container">
-        
-        {/* Admin mode notice */}
+
+        {/* Admin notice */}
         {user?.role === "admin" && (
-          <div style={{
-            background: "linear-gradient(135deg, #0284c7 0%, #0369a1 100%)",
-            color: "white",
-            padding: "12px 20px",
-            borderRadius: "10px",
-            marginBottom: "20px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            boxShadow: "0 4px 12px rgba(2, 132, 199, 0.25)"
-          }}>
+          <div className="admin-session-banner">
             <div>
-              <strong style={{ fontSize: "1.05rem" }}>Administrator Session Active</strong>
-              <p style={{ margin: "2px 0 0 0", fontSize: "0.88rem", opacity: 0.9 }}>
-                You have system-wide access to user account management and board oversight.
+              <strong>Administrator Session Active</strong>
+              <p>
+                You have system-wide access to user account management and board
+                oversight.
               </p>
             </div>
-            <Link to="/admin" className="btn-primary" style={{ background: "white", color: "#0284c7", fontWeight: "bold", textDecoration: "none", whiteSpace: "nowrap" }}>
+            <Link
+              to="/admin"
+              className="btn-primary"
+              style={{ whiteSpace: "nowrap", textDecoration: "none" }}
+            >
               Admin Control Panel
             </Link>
           </div>
         )}
 
-        {/* Header Bar */}
+        {/* Header */}
         <div className="boards-header">
           <div>
-            <h1>{user?.role === "admin" ? "All System Boards" : "My Boards"}</h1>
-            <p className="welcome-text">Welcome back, <strong>{user.fullName || user.username}</strong></p>
+            <h1>
+              {user?.role === "admin" ? "All System Boards" : "My Boards"}
+            </h1>
+            <p className="welcome-text">
+              Welcome back,{" "}
+              <strong style={{ color: "var(--text-primary)" }}>
+                {user.fullName || user.username}
+              </strong>
+              {boards.length > 0 && (
+                <>
+                  . You have{" "}
+                  <strong style={{ color: "var(--indigo)" }}>
+                    {boards.length}
+                  </strong>{" "}
+                  active board{boards.length !== 1 ? "s" : ""}.
+                </>
+              )}
+            </p>
           </div>
           {user?.role !== "admin" && (
-            <button className="btn-primary" onClick={() => setShowModal(true)}>
-              Create Board
+            <button
+              className="btn-primary"
+              onClick={() => setShowModal(true)}
+              style={{ display: "flex", alignItems: "center", gap: "6px" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              CREATE BOARD
             </button>
           )}
         </div>
 
-        {/* Server Fetch Error Banner */}
+        {/* Fetch Error */}
         {isError && (
           <div className="form-error" style={{ marginBottom: "24px" }}>
             {error?.message || "Failed to load boards."}
@@ -146,9 +163,15 @@ function Boards() {
         {boards.length === 0 && !isError ? (
           <div className="boards-empty-state">
             <h2>No Boards Created Yet</h2>
-            <p>Get started by creating your first board to organize your tasks.</p>
+            <p>
+              Get started by creating your first board to organize your tasks.
+            </p>
             {user?.role !== "admin" && (
-              <button className="btn-primary" onClick={() => setShowModal(true)}>
+              <button
+                className="btn-primary"
+                onClick={() => setShowModal(true)}
+                style={{ margin: "0 auto" }}
+              >
                 Create Board
               </button>
             )}
@@ -157,27 +180,63 @@ function Boards() {
           <div className="boards-grid">
             {boards.map((board) => (
               <div key={board._id} className="board-card">
-                <h3>{board.name}</h3>
-                <p>{board.description || "No description provided."}</p>
+                <div>
+                  <h3>{board.name}</h3>
+                  <p>{board.description || "No description provided for this board."}</p>
+                </div>
                 <div className="board-card-footer">
                   <span className="board-date">
-                    Created {new Date(board.createdAt).toLocaleDateString()}
+                    {new Date(board.createdAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
                   </span>
-                  <Link to={`/boards/${board._id}`} className="view-board-link">
-                    Open Board
+                  <Link
+                    to={`/boards/${board._id}`}
+                    className="view-board-link"
+                  >
+                    Open Board →
                   </Link>
                 </div>
               </div>
             ))}
+
+            {/* New Board Card */}
+            {user?.role !== "admin" && (
+              <div
+                className="new-board-card"
+                onClick={() => setShowModal(true)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === "Enter" && setShowModal(true)}
+              >
+                <div className="new-board-plus">+</div>
+                <span className="new-board-label">New Board</span>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Modal for creating board */}
+        {/* Create Board Modal */}
         {showModal && (
-          <div className="modal-overlay" onClick={() => setShowModal(false)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal-overlay"
+            onClick={() => setShowModal(false)}
+          >
+            <div
+              className="modal-content"
+              onClick={(e) => e.stopPropagation()}
+            >
               <h2>Create New Board</h2>
-              {formError && <div className="form-error">{formError}</div>}
+              <p className="modal-subtitle">
+                Set up a new Kanban board for your project or team.
+              </p>
+
+              {formError && (
+                <div className="form-error">{formError}</div>
+              )}
+
               <form onSubmit={handleCreateBoard}>
                 <div className="form-group">
                   <label>Board Name *</label>
@@ -214,14 +273,15 @@ function Boards() {
                     className="btn-primary"
                     disabled={createBoardMutation.isPending}
                   >
-                    {createBoardMutation.isPending ? "Creating..." : "Create Board"}
+                    {createBoardMutation.isPending
+                      ? "Creating…"
+                      : "Create Board"}
                   </button>
                 </div>
               </form>
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
