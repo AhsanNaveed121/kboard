@@ -1,6 +1,7 @@
 import { getHeaders, handleApiResponse } from "../utils/apiUtils";
 
-const BASE_URL = "/api/v1/boards";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+const BASE_URL = `${API_BASE}/api/v1/boards`;
 
 export async function createBoard({ name, description }) {
   const response = await fetch(`${BASE_URL}/create-board`, {
@@ -73,4 +74,14 @@ export async function removeBoardMember({ boardId, userId }) {
   });
 
   return handleApiResponse(response, "Failed to remove member from board");
+}
+
+export async function leaveBoard(boardId) {
+  const response = await fetch(`${BASE_URL}/${boardId}/leave`, {
+    method: "POST",
+    headers: getHeaders(),
+    credentials: "include"
+  });
+
+  return handleApiResponse(response, "Failed to leave board");
 }

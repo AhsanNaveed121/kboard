@@ -109,6 +109,11 @@ a { text-decoration: none; color: inherit; }
   list-style: none;
   gap: 4px;
   align-items: center;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .nav-links li a {

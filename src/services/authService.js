@@ -1,5 +1,5 @@
-// Base URL — Vite proxy forwards /api → http://localhost:8000
-const BASE_URL = "/api/v1/users";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+const BASE_URL = `${API_BASE}/api/v1/users`;
 
 export async function registerUser({ fullName, email, dob, password, profilePicFile }) {
   const formData = new FormData();
@@ -106,6 +106,26 @@ export async function logout() {
 
   if (!response.ok) {
     throw new Error(data.message || "Logout failed");
+  }
+
+  return data;
+}
+
+export async function getCurrentUser() {
+  const token = localStorage.getItem("accessToken");
+
+  const response = await fetch(`${BASE_URL}/current-user`, {
+    method: "GET",
+    headers: {
+      Authorization: token ? `Bearer ${token}` : "",
+    },
+    credentials: "include",
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch current user");
   }
 
   return data;

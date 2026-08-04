@@ -1,6 +1,7 @@
 import { getHeaders, handleApiResponse } from "../utils/apiUtils";
 
-const BASE_URL = "/api/v1/users";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+const BASE_URL = `${API_BASE}/api/v1/users`;
 
 export async function getAllUsers() {
   const response = await fetch(`${BASE_URL}`, {

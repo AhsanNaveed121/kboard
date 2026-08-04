@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
-import { getBoardById } from "../services/boardService";
+import { getBoardById, leaveBoard } from "../services/boardService";
 import {
   getColumnsByBoard,
   createColumn,
@@ -129,6 +129,15 @@ function BoardDetails() {
       queryClient.invalidateQueries({ queryKey: ["tasks", boardId] });
     },
     onError: (err) => alert(err.message || "Failed to delete task"),
+  });
+
+  const leaveBoardMutation = useMutation({
+    mutationFn: () => leaveBoard(boardId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["boards"] });
+      navigate(user?.role === "admin" ? "/admin" : "/boards");
+    },
+    onError: (err) => alert(err.message || "Failed to leave board"),
   });
 
   // Column Handlers
@@ -271,6 +280,7 @@ function BoardDetails() {
   const tasks = Array.isArray(tasksResponse?.data) ? tasksResponse.data : [];
 
   const isOwner = user?.role === "admin" || board.owner === user?._id || board.owner?._id === user?._id;
+  const isActualOwner = board.owner === user?._id || board.owner?._id === user?._id;
   const boardMembers = [
     ...(board.owner ? [board.owner] : []),
     ...(Array.isArray(board.members) ? board.members : []),
@@ -283,8 +293,7 @@ function BoardDetails() {
         <div className="board-nav">
           <Link to={user?.role === "admin" ? "/admin" : "/boards"} className="back-link">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12"></line>
-              <polyline points="12 19 5 12 12 5"></polyline>
+              <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
             Back to Boards
           </Link>
@@ -299,6 +308,20 @@ function BoardDetails() {
           </div>
 
           <div className="board-actions">
+            {!isActualOwner && (
+              <button
+                className="btn-danger"
+                style={{ padding: "8px 14px", fontSize: "0.85rem" }}
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to leave this board?")) {
+                    leaveBoardMutation.mutate();
+                  }
+                }}
+                disabled={leaveBoardMutation.isPending}
+              >
+                {leaveBoardMutation.isPending ? "Leaving…" : "Leave Board"}
+              </button>
+            )}
             {isOwner && (
               <>
                 <button

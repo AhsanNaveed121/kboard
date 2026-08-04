@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
-import { getBoards, createBoard } from "../services/boardService";
+import { getBoards, createBoard, leaveBoard } from "../services/boardService";
 
 function Boards() {
   const { user, loading: authLoading } = useAuth();
@@ -12,6 +12,16 @@ function Boards() {
   const [newBoardName, setNewBoardName] = useState("");
   const [newBoardDesc, setNewBoardDesc] = useState("");
   const [formError, setFormError] = useState("");
+
+  const leaveBoardMutation = useMutation({
+    mutationFn: leaveBoard,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["boards"] });
+    },
+    onError: (err) => {
+      alert(err.message || "Failed to leave board");
+    },
+  });
 
   const {
     data: boardsResponse,
@@ -178,29 +188,50 @@ function Boards() {
           </div>
         ) : (
           <div className="boards-grid">
-            {boards.map((board) => (
-              <div key={board._id} className="board-card">
-                <div>
-                  <h3>{board.name}</h3>
-                  <p>{board.description || "No description provided for this board."}</p>
+            {boards.map((board) => {
+              const isActualOwner = board.owner === user?._id || board.owner?._id === user?._id;
+              return (
+                <div key={board._id} className="board-card">
+                  <div>
+                    <h3>{board.name}</h3>
+                    <p>{board.description || "No description provided for this board."}</p>
+                  </div>
+                  <div className="board-card-footer">
+                    <span className="board-date">
+                      {new Date(board.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      {!isActualOwner && (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ padding: "4px 8px", fontSize: "0.75rem", color: "var(--red, #ef4444)" }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (window.confirm(`Leave board "${board.name}"?`)) {
+                              leaveBoardMutation.mutate(board._id);
+                            }
+                          }}
+                          disabled={leaveBoardMutation.isPending}
+                        >
+                          Leave
+                        </button>
+                      )}
+                      <Link
+                        to={`/boards/${board._id}`}
+                        className="view-board-link"
+                      >
+                        Open Board →
+                      </Link>
+                    </div>
+                  </div>
                 </div>
-                <div className="board-card-footer">
-                  <span className="board-date">
-                    {new Date(board.createdAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </span>
-                  <Link
-                    to={`/boards/${board._id}`}
-                    className="view-board-link"
-                  >
-                    Open Board →
-                  </Link>
-                </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* New Board Card */}
             {user?.role !== "admin" && (

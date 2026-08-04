@@ -8,6 +8,7 @@ import Settings from "../pages/Settings";
 import Boards from "../pages/Boards";
 import BoardDetails from "../pages/BoardDetails";
 import AdminDashboard from "../pages/AdminDashboard";
+import OAuthSuccess from "../pages/OAuthSuccess";
 import MainLayout from "../layouts/MainLayout";
 
 function AppRoutes() {
@@ -47,6 +48,12 @@ function AppRoutes() {
           <Settings />
         </MainLayout>
       } />
+
+      {/*
+        No layout wrapper here — OAuthSuccess redirects instantly.
+        The user never actually sees it; it's just a processing stop.
+      */}
+      <Route path="/oauth-success" element={<OAuthSuccess />} />
     </Routes>
   );
 }
