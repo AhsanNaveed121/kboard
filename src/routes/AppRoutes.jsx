@@ -9,7 +9,7 @@ import Boards from "../pages/Boards";
 import BoardDetails from "../pages/BoardDetails";
 import AdminDashboard from "../pages/AdminDashboard";
 import OAuthSuccess from "../pages/OAuthSuccess";
-import MainLayout from "../layouts/MainLayout";
+import MainLayout from "../layouts/Mainlayout";
 
 function AppRoutes() {
   return (
