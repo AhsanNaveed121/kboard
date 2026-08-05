@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 function Settings() {
+  const { user } = useAuth();
   const [compactView, setCompactView] = useState(
     () => localStorage.getItem("compactView") === "true"
   );
@@ -18,6 +21,14 @@ function Settings() {
   return (
     <main className="settings-page">
       <div className="settings-container">
+        <div className="board-nav" style={{ marginBottom: "1.5rem" }}>
+          <Link to={user?.role ? "/" : "/login"} className="back-link">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            Back to Dashboard
+          </Link>
+        </div>
         <h1>System Settings</h1>
 
         {savedMessage && <p className="form-success">{savedMessage}</p>}

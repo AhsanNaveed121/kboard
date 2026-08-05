@@ -179,7 +179,8 @@ function Register() {
             type="button"
             onClick={() => {
               const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-              window.location.href = `${apiBase}/auth/google`;
+              const frontendOrigin = window.location.origin;
+              window.location.href = `${apiBase}/auth/google?frontend_url=${encodeURIComponent(frontendOrigin)}`;
             }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">

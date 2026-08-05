@@ -21,12 +21,13 @@ export async function handleApiResponse(response, defaultErrorMsg = "An error oc
   }
 
   if (!response.ok) {
-    if (response.status === 401) {
+    if (response.status === 401 || response.status === 403) {
       localStorage.removeItem("accessToken");
-      throw new Error("Your session has expired or the token is invalid. Please log in again.");
-    }
-    if (response.status === 403) {
-      throw new Error(data.message || "Access denied. You do not have permission to perform this operation.");
+      localStorage.removeItem("user");
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+      throw new Error("Your session has expired or you do not have permission. Please log in again.");
     }
     if (response.status === 404) {
       throw new Error(data.message || "The requested item or resource could not be found.");

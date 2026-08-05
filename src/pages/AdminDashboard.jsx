@@ -144,6 +144,14 @@ export default function AdminDashboard() {
   return (
     <main className="admin-page">
       <div className="admin-container">
+        <div className="board-nav" style={{ marginBottom: "1.5rem" }}>
+          <Link to="/boards" className="back-link">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            Back to Boards
+          </Link>
+        </div>
         {/* Header */}
         <header className="admin-header">
           <div>

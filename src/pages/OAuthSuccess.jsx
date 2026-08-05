@@ -25,6 +25,7 @@ function OAuthSuccess() {
             email: userData.email,
             fullName: userData.fullName,
             role: userData.role,
+            providerId: userData.providerId,
           });
 
           navigate("/boards", { replace: true });

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { updateUserProfile, changePassword } from "../services/authService";
 
@@ -98,6 +99,14 @@ function Profile() {
   return (
     <main className="settings-page">
       <div className="settings-container">
+        <div className="board-nav" style={{ marginBottom: "1.5rem" }}>
+          <Link to={user?.role ? "/" : "/login"} className="back-link">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            Back to Dashboard
+          </Link>
+        </div>
         <h1>User Profile</h1>
 
         {/* Profile Overview Card */}
@@ -191,50 +200,51 @@ function Profile() {
             </button>
           </form>
         </section>
-
         {/* Change Password */}
-        <section className="settings-card">
-          <h2>Change Password</h2>
+        {!user?.providerId && (
+          <section className="settings-card">
+            <h2>Change Password</h2>
 
-          {passwordError && <p className="form-error">{passwordError}</p>}
-          {passwordSuccess && <p className="form-success">{passwordSuccess}</p>}
+            {passwordError && <p className="form-error">{passwordError}</p>}
+            {passwordSuccess && <p className="form-success">{passwordSuccess}</p>}
 
-          <form onSubmit={handlePasswordSave}>
-            <div className="form-group">
-              <label>Current Password</label>
-              <input
-                type="password"
-                placeholder="Enter current password"
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-              />
-            </div>
+            <form onSubmit={handlePasswordSave}>
+              <div className="form-group">
+                <label>Current Password</label>
+                <input
+                  type="password"
+                  placeholder="Enter current password"
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                />
+              </div>
 
-            <div className="form-group">
-              <label>New Password</label>
-              <input
-                type="password"
-                placeholder="Enter new password (min. 8 characters)"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-            </div>
+              <div className="form-group">
+                <label>New Password</label>
+                <input
+                  type="password"
+                  placeholder="Enter new password (min. 8 characters)"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+              </div>
 
-            <div className="form-group">
-              <label>Confirm New Password</label>
-              <input
-                type="password"
-                placeholder="Confirm new password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </div>
+              <div className="form-group">
+                <label>Confirm New Password</label>
+                <input
+                  type="password"
+                  placeholder="Confirm new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </div>
 
-            <button type="submit" disabled={passwordLoading}>
-              {passwordLoading ? "Updating..." : "Update Password"}
-            </button>
-          </form>
-        </section>
+              <button type="submit" disabled={passwordLoading}>
+                {passwordLoading ? "Updating..." : "Update Password"}
+              </button>
+            </form>
+          </section>
+        )}
 
         {/* Danger Zone */}
         <section className="settings-card danger">

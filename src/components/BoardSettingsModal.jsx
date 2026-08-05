@@ -57,6 +57,7 @@ export default function BoardSettingsModal({ board, onClose }) {
     mutationFn: (userId) => removeBoardMember({ boardId: board._id, userId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["board", board._id] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", board._id] });
       setFormError("");
     },
     onError: (err) => setFormError(err.message),

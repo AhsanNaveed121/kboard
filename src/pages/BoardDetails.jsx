@@ -116,11 +116,51 @@ function BoardDetails() {
 
   const updateTaskMutation = useMutation({
     mutationFn: ({ taskId, updates }) => updateTask(taskId, updates),
-    onSuccess: () => {
+    onMutate: async ({ taskId, updates }) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ["tasks", boardId] });
+
+      // Snapshot the previous value
+      const previousTasks = queryClient.getQueryData(["tasks", boardId]);
+
+      // Optimistically update to the new value
+      if (previousTasks && previousTasks.data) {
+        queryClient.setQueryData(["tasks", boardId], (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            data: old.data.map((task) => {
+              if (task._id === taskId) {
+                const updatedColumn =
+                  typeof task.column === "object" && task.column !== null
+                    ? { ...task.column, _id: updates.column }
+                    : updates.column;
+                return {
+                  ...task,
+                  ...updates,
+                  column: updates.column !== undefined ? updatedColumn : task.column,
+                };
+              }
+              return task;
+            }),
+          };
+        });
+      }
+
+      // Return a context object with the snapshotted value
+      return { previousTasks };
+    },
+    onError: (err, { taskId, updates }, context) => {
+      // Rollback to the previous value
+      if (context?.previousTasks) {
+        queryClient.setQueryData(["tasks", boardId], context.previousTasks);
+      }
+      alert(err.message || "Failed to update task");
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", boardId] });
       setTaskModalState({ isOpen: false, columnId: null, task: null });
     },
-    onError: (err) => alert(err.message || "Failed to update task"),
   });
 
   const deleteTaskMutation = useMutation({

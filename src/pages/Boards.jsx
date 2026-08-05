@@ -104,6 +104,14 @@ function Boards() {
   return (
     <div className="boards-page">
       <div className="boards-container">
+        <div className="board-nav" style={{ marginBottom: "1.5rem" }}>
+          <Link to="/" className="back-link">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            Back to Home
+          </Link>
+        </div>
 
         {/* Admin notice */}
         {user?.role === "admin" && (

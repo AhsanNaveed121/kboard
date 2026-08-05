@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import Home from "../pages/Home";
 import Login from "../pages/Login";
@@ -10,43 +10,56 @@ import BoardDetails from "../pages/BoardDetails";
 import AdminDashboard from "../pages/AdminDashboard";
 import OAuthSuccess from "../pages/OAuthSuccess";
 import MainLayout from "../layouts/Mainlayout";
+import ProtectedRoute from "../components/ProtectedRoute";
 
 function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={
-        <MainLayout>
-          <Home />
-        </MainLayout>
+        <ProtectedRoute>
+          <MainLayout>
+            <Home />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/admin" element={
-        <MainLayout>
-          <AdminDashboard />
-        </MainLayout>
+        <ProtectedRoute>
+          <MainLayout>
+            <AdminDashboard />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/login" element={
         <Login />
       } />
       <Route path="/register" element={<Register />} />
       <Route path="/boards" element={
-        <MainLayout>
-          <Boards />
-        </MainLayout>
+        <ProtectedRoute>
+          <MainLayout>
+            <Boards />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/boards/:boardId" element={
-        <MainLayout>
-          <BoardDetails />
-        </MainLayout>
+        <ProtectedRoute>
+          <MainLayout>
+            <BoardDetails />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/profile" element={
-        <MainLayout>
-          <Profile />
-        </MainLayout>
+        <ProtectedRoute>
+          <MainLayout>
+            <Profile />
+          </MainLayout>
+        </ProtectedRoute>
       } />
       <Route path="/settings" element={
-        <MainLayout>
-          <Settings />
-        </MainLayout>
+        <ProtectedRoute>
+          <MainLayout>
+            <Settings />
+          </MainLayout>
+        </ProtectedRoute>
       } />
 
       {/*
@@ -54,6 +67,9 @@ function AppRoutes() {
         The user never actually sees it; it's just a processing stop.
       */}
       <Route path="/oauth-success" element={<OAuthSuccess />} />
+      
+      {/* Fallback for unknown routes */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
