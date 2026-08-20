@@ -16,7 +16,6 @@ function OAuthSuccess() {
       if (token) {
         // Fallback: If token was provided in URL parameter
         try {
-          localStorage.setItem("accessToken", token);
           const payloadBase64 = token.split(".")[1];
           const userData = JSON.parse(atob(payloadBase64));
 

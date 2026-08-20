@@ -50,14 +50,12 @@ export async function loginUser({ email, password }) {
 }
 
 export async function updateUserProfile({ fullName, dob }) {
-  const token = localStorage.getItem("accessToken");
-
   const response = await fetch(`${BASE_URL}/update-account`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      Authorization: token ? `Bearer ${token}` : "",
     },
+    credentials: "include",
     body: JSON.stringify({ fullName, dob }),
   });
 
@@ -72,14 +70,12 @@ export async function updateUserProfile({ fullName, dob }) {
 
 
 export async function changePassword({ oldPassword, newPassword }) {
-  const token = localStorage.getItem("accessToken");
-
   const response = await fetch(`${BASE_URL}/change-password`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: token ? `Bearer ${token}` : "",
     },
+    credentials: "include",
     body: JSON.stringify({ oldPassword, newPassword }),
   });
 
@@ -112,13 +108,8 @@ export async function logout() {
 }
 
 export async function getCurrentUser() {
-  const token = localStorage.getItem("accessToken");
-
   const response = await fetch(`${BASE_URL}/current-user`, {
     method: "GET",
-    headers: {
-      Authorization: token ? `Bearer ${token}` : "",
-    },
     credentials: "include",
   });
 

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { getCurrentUser } from "../services/authService";
 
 const AuthContext = createContext();
 
@@ -6,37 +7,35 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Restore user from localStorage on initial page load / refresh
+  // Restore user from secure HTTPOnly cookie on initial page load / refresh
   useEffect(() => {
-    try {
-      const savedUser = localStorage.getItem("user");
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
+    const fetchUser = async () => {
+      try {
+        const response = await getCurrentUser();
+        if (response?.data) {
+          setUser(response.data);
+        }
+      } catch (err) {
+        // Not logged in or session expired
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Failed to parse saved user from localStorage", err);
-    } finally {
-      setLoading(false);
-    }
+    };
+    fetchUser();
   }, []);
 
   const login = (userData) => {
     setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("user");
-    localStorage.removeItem("accessToken");
     window.location.href = "/login";
   };
 
   const updateUser = (updatedUserData) => {
     setUser((prevUser) => {
-      const merged = { ...prevUser, ...updatedUserData };
-      localStorage.setItem("user", JSON.stringify(merged));
-      return merged;
+      return { ...prevUser, ...updatedUserData };
     });
   };
 

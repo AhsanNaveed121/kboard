@@ -56,10 +56,8 @@ function Register() {
     try {
       const response = await registerUser({ fullName, email, dob, password, profilePicFile });
       const payload = response.data || {};
-      const token = payload.accessToken;
       const userData = payload.user || (payload.email ? payload : null);
 
-      if (token) localStorage.setItem("accessToken", token);
       if (userData) login(userData);
 
       setSuccess("Account created successfully! Logging you in…");

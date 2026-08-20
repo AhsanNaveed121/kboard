@@ -29,9 +29,6 @@ function Login() {
     setLoading(true);
     try {
       const response = await loginUser(form);
-      if (response.data?.accessToken) {
-        localStorage.setItem("accessToken", response.data.accessToken);
-      }
       const userData = response.data?.user;
       if (userData) login(userData);
       const redirectTarget = userData?.role === "admin" ? "/admin" : "/boards";

@@ -1,11 +1,9 @@
 /**
- * Helper function to retrieve headers including JWT token from localStorage
+ * Helper function to retrieve standard JSON headers
  */
 export function getHeaders() {
-  const token = localStorage.getItem("accessToken");
   return {
     "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` })
   };
 }
 
@@ -22,8 +20,6 @@ export async function handleApiResponse(response, defaultErrorMsg = "An error oc
 
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("user");
       if (window.location.pathname !== "/login") {
         window.location.href = "/login";
       }
