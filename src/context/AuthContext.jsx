@@ -9,19 +9,36 @@ export function AuthProvider({ children }) {
 
   // Restore user from secure HTTPOnly cookie on initial page load / refresh
   useEffect(() => {
+    // Purge legacy/old localStorage auth items if present
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("user");
+
     const fetchUser = async () => {
       try {
         const response = await getCurrentUser();
         if (response?.data) {
           setUser(response.data);
+        } else {
+          setUser(null);
         }
       } catch (err) {
-        // Not logged in or session expired
+        setUser(null);
       } finally {
         setLoading(false);
       }
     };
+
     fetchUser();
+
+    // Global listener for 401 Unauthorized responses across all API calls
+    const handleUnauthorized = () => {
+      setUser(null);
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    return () => {
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
+    };
   }, []);
 
   const login = (userData) => {

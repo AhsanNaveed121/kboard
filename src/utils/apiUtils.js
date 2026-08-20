@@ -19,11 +19,15 @@ export async function handleApiResponse(response, defaultErrorMsg = "An error oc
   }
 
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-      if (window.location.pathname !== "/login") {
+    if (response.status === 401) {
+      window.dispatchEvent(new Event("auth:unauthorized"));
+      if (window.location.pathname !== "/login" && window.location.pathname !== "/register") {
         window.location.href = "/login";
       }
-      throw new Error("Your session has expired or you do not have permission. Please log in again.");
+      throw new Error("Your session has expired. Please log in again.");
+    }
+    if (response.status === 403) {
+      throw new Error(data.message || "Forbidden - You do not have permission to access this resource.");
     }
     if (response.status === 404) {
       throw new Error(data.message || "The requested item or resource could not be found.");
