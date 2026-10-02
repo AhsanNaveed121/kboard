@@ -13,37 +13,40 @@ function OAuthSuccess() {
       const params = new URLSearchParams(window.location.search);
       const token = params.get("token");
 
-      if (token) {
-        // Fallback: If token was provided in URL parameter
+      let loggedInUser = null;
+
+      // First try fetching the complete profile via the newly set cookie
+      try {
+        const userRes = await getCurrentUser();
+        if (userRes?.data) {
+          loggedInUser = userRes.data;
+        }
+      } catch (err) {
+        console.warn("Could not fetch user profile via cookie, checking token fallback:", err);
+      }
+
+      // Fallback: If cookie fetch failed or token provided in URL
+      if (!loggedInUser && token) {
         try {
           const payloadBase64 = token.split(".")[1];
           const userData = JSON.parse(atob(payloadBase64));
-
-          login({
+          loggedInUser = {
             _id: userData._id,
             email: userData.email,
             fullName: userData.fullName,
             role: userData.role,
             providerId: userData.providerId,
-          });
-
-          navigate("/boards", { replace: true });
-          return;
+          };
         } catch (err) {
           console.error("Failed to decode URL OAuth token:", err);
         }
       }
 
-      // Secure default: Fetch authenticated profile via HTTP-Only cookie set during OAuth redirect
-      try {
-        const userRes = await getCurrentUser();
-        if (userRes?.data) {
-          login(userRes.data);
-          navigate("/boards", { replace: true });
-          return;
-        }
-      } catch (err) {
-        console.error("OAuth cookie verification failed:", err);
+      if (loggedInUser) {
+        login(loggedInUser);
+        const target = loggedInUser.role === "admin" ? "/admin" : "/boards";
+        navigate(target, { replace: true });
+        return;
       }
 
       setStatus("Login failed. Could not verify session.");

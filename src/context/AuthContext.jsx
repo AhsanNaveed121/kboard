@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { getCurrentUser } from "../services/authService";
+import { getCurrentUser, logout as logoutApi } from "../services/authService";
 
 const AuthContext = createContext();
 
@@ -45,9 +45,15 @@ export function AuthProvider({ children }) {
     setUser(userData);
   };
 
-  const logout = () => {
-    setUser(null);
-    window.location.href = "/login";
+  const logout = async () => {
+    try {
+      await logoutApi();
+    } catch (err) {
+      console.warn("Backend logout failed:", err);
+    } finally {
+      setUser(null);
+      window.location.href = "/login";
+    }
   };
 
   const updateUser = (updatedUserData) => {
